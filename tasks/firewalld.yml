@@ -36,21 +36,11 @@
         interface: ens224
         permanent: true
 
-    # Temp use only; remove later
-    - name: Allow InfluxDB
-      ansible.posix.firewalld:
-        zone: trusted
-        port: 8086/tcp
-        source: 10.1.0.0/16
-        state: enabled
-        permanent: true
-        immediate: true
-
     - name: Set firewalld rules
       ansible.posix.firewalld:
         zone: "{{ item.zone }}"
         port: "{{ item.port }}/{{ item.proto }}"
-        source: "{{ item.source }}"
+        #source: "{{ item.source }}"
         state: "{{ item.state }}"
         permanent: true
         immediate: true
@@ -62,7 +52,7 @@
     - name: Allow public SSH
       ansible.posix.firewalld:
         port: "{{ ssh_port }}/tcp"
-        source: "{{ ssh_nets }}"
+        #source: "{{ ssh_nets }}"
         zone: "{{ item }}"
         state: enabled
         permanent: true
