@@ -23,15 +23,6 @@
         direction: incoming
 
 # Role-specific
-    - name: Allow InfluxDB
-      community.general.ufw:
-        rule: allow
-        direction: in
-        port: 8086
-        proto: tcp
-        src: 10.1.50.0/24
-        comment: "Allow InfluxDB"
-
     - name: Allow iPerf
       community.general.ufw:
         rule: allow
