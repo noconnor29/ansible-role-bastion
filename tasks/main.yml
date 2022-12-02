@@ -3,12 +3,13 @@
 #  include_vars: "{{ ansible_os_family }}.yml"
 
 - include_tasks: git.yml
+- include_tasks: iptables.yml
 
-# Firewall
-# Firewalld
-- include_tasks: firewalld.yml
-  when: ansible_os_family == 'RedHat'
-
-# UFW
-- include_tasks: ufw.yml
-  when: ansible_os_family == 'Debian'
+## Firewall
+## Firewalld
+#- include_tasks: firewalld.yml
+#  when: ansible_os_family == 'RedHat'
+#
+## UFW
+#- include_tasks: ufw.yml
+#  when: ansible_os_family == 'Debian'
