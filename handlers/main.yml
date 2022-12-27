@@ -2,3 +2,20 @@
 - name: reload sysctl
   ansible.posix.sysctl:
     reload: true
+
+#- name: reload pf
+#  ansible.builtin.command: pfctl -f "{{ pf_conf_path }}"
+- name: Start pf
+  ansible.builtin.service:
+    name: pf
+    state: started
+
+- name: Restart pf
+  ansible.builtin.service:
+    name: pf
+    state: restarted
+
+- name: Restart pflog
+  ansible.builtin.service:
+    name: pflog
+    state: restarted

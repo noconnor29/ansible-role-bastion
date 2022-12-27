@@ -1,0 +1,82 @@
+---
+- name: Stat pf.conf
+  ansible.builtin.stat:
+    path: "{{ pf_conf_path }}"
+  register: pf_conf
+
+- name: Create pf.conf
+  ansible.builtin.copy:
+    src: ../templates/pf.conf
+    dest: "{{ pf_conf_path }}"
+    owner: root
+    mode: 0644
+  when: pf_conf.stat.exists == false
+
+- name: Configure pf.conf
+  ansible.builtin.lineinfile:
+    dest: "{{ pf_conf_path }}"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    # validate: 'sshd -T -f %s'
+    insertafter: EOF
+    mode: 0644
+  with_items:
+    - regexp: "^gateway_enable"
+      line: "gateway_enable={{ gateway_enable }}"
+    - regexp: "^table <bruteforce>"
+      line: "table <bruteforce> persist"
+    - regexp: "^tcp_services"
+      line: tcp_services = { "{{ tcp_services | join(', ') }}" }
+    - regexp: "^udp_services"
+      line: udp_services = { "{{ udp_services | join(', ') }}" }
+    - regexp: "^icmp_types"
+      line: icmp_types = { "{{ icmp_types | join(', ') }}" }
+    - regexp: "^block quick"
+      line: "block quick from <bruteforce>"
+    - regexp: "^pass quick proto tcp from any to any port ssh"
+      line: pass quick proto tcp from any to any port ssh flags S/SA keep state (max-src-conn 10, max-src-conn-rate 15/5, overload <bruteforce> flush global)
+    - regexp: "^block all"
+      line: "block all"
+    - regexp: "^pass in proto tcp to any port $tcp_services keep state"
+      line: "pass in proto tcp to any port $tcp_services keep state"
+    - regexp: "^pass in proto udp to any port $udp_services keep state"
+      line: "pass in proto udp to any port $udp_services keep state"
+    - regexp: "^pass in inet proto icmp all icmp-type $icmp_types keep state"
+      line: "pass in inet proto icmp all icmp-type $icmp_types keep state"
+    - regexp: "^pass out all keep state"
+      line: "pass out all keep state"
+  when: pf_conf.stat.exists == true
+  notify: Restart pf
+
+- name: Enable pf in rc.conf
+  ansible.builtin.lineinfile:
+    dest: "{{ rc_conf_path }}"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    insertafter: EOF
+    mode: 0644
+  with_items:
+    - regexp: "^sysrc pf_enable"
+      line: "sysrc pf_enable={{ pf_enable }}"
+    - regexp: "^pf_rules"
+      line: 'pf_rules={{ pf_conf_path }}'
+    - regexp: "^sysrc pflog_enable"
+      line: "sysrc pflog_enable={{ pflog_enable }}"
+    - regexp: "^pflog_logfile"
+      line: 'pflog_logfile={{ pflog_logfile }}'
+    - regexp: "^pflog_flags"
+      line: 'pflog_flags={{ pflog_flags }}'
+  notify:
+    - Restart pf
+    - Restart pflog
+
+- name: Set cron to clean stale entries in bruteforce table
+  ansible.builtin.cron:
+    name: "pf: Clean stale bruteforce entries"
+    cron_file: clean_pf_bruteforce_tbl
+    user: root
+    job: "pfctl -t bruteforce -T expire 86400"
+    special_time: "daily"
+    state: present
